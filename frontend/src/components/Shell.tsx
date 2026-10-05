@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router';
-import { Radar, LayoutDashboard, ScanLine, Zap, FlaskConical, ChartNoAxesCombined, Network, Play, RotateCcw, ChevronDown, MapPin, CircleHelp, Bell } from 'lucide-react';
+import { Radar, LayoutDashboard, ScanLine, Zap, FlaskConical, ChartNoAxesCombined, Network, Play, RotateCcw, ChevronDown, MapPin, CircleHelp, Bell, X } from 'lucide-react';
 import useNowcast, { useReplayClock } from '../features/useNowcast';
 import { actions, useScenarioStore, useNowcastStore, useUiStore, useAuthStore, canAccessRoute } from '../store';
 import { Badge, time } from './common';
@@ -36,8 +36,18 @@ export default function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const showScenarioReplay = location.pathname === '/scenarios';
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   useReplayClock();
+
+  useEffect(() => {
+    if (!isHelpOpen) return;
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsHelpOpen(false);
+    };
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, [isHelpOpen]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -92,7 +102,7 @@ export default function Shell() {
           })}
         </div>
         <div className="rail-bottom">
-          <button title="Technical documentation" aria-label="Technical documentation" onClick={() => navigate('/technical')}>
+          <button type="button" title="Help and keyboard shortcuts" aria-label="Help and keyboard shortcuts" onClick={() => setIsHelpOpen(true)}>
             <CircleHelp size={20} />
           </button>
           <AccountPanel />
@@ -157,6 +167,31 @@ export default function Shell() {
         {useUiStore(state => state.inspection) && <InspectionDrawer />}
         <ServerDownPopup />
       </div>
+      {isHelpOpen && (
+        <div className="help-panel-overlay" onClick={() => setIsHelpOpen(false)}>
+          <section className="help-panel" role="dialog" aria-modal="true" aria-labelledby="help-panel-title" onClick={event => event.stopPropagation()}>
+            <header>
+              <div>
+                <span className="eyebrow">OPERATOR ASSISTANCE</span>
+                <h2 id="help-panel-title">Quick help</h2>
+              </div>
+              <button type="button" className="icon-button" aria-label="Close help" onClick={() => setIsHelpOpen(false)}>
+                <X size={18} />
+              </button>
+            </header>
+            <div className="help-panel-body">
+              <p>Use the left rail to switch between operational views. This help panel stays on the current page; open <strong>Technical</strong> from the rail when you need integration and diagnostics documentation.</p>
+              <div className="help-shortcuts">
+                <div><kbd>Space</kbd><span>Play or pause the scenario replay</span></div>
+                <div><kbd>R</kbd><span>Reset the current scenario</span></div>
+                <div><kbd>N</kbd><span>Advance to the next scenario frame</span></div>
+                <div><kbd>H</kbd><span>Open the Hazards view</span></div>
+                <div><kbd>P</kbd><span>Open Performance</span></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
